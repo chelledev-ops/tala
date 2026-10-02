@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ShieldCheck } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,10 +43,8 @@ export default function Login() {
     <div className="min-h-[calc(100vh-4rem)] grid lg:grid-cols-2">
       <div className="hidden lg:flex flex-col justify-between bg-[#0B192C] isla-grid text-white p-12">
         <div className="flex items-center gap-2.5">
-          <div className="h-9 w-9 rounded-lg bg-white/10 flex items-center justify-center">
-            <ShieldCheck className="h-5 w-5 text-emerald-400" />
-          </div>
-          <span className="font-extrabold text-lg">ISLA Proof</span>
+          <img src="/tala-icon.png" alt="TALA" className="h-9 w-9 rounded-lg" />
+          <span className="font-extrabold text-lg">TALA</span>
         </div>
         <div>
           <h1 className="text-4xl font-extrabold tracking-tight leading-tight">

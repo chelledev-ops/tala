@@ -14,6 +14,7 @@ import {
   ArrowLeft,
   ExternalLink,
   Plus,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -24,6 +25,17 @@ import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { VerifyQR } from "@/components/VerifyQR";
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -183,6 +195,11 @@ export default function ProjectDetail() {
 
         {/* Evidence */}
         <TabsContent value="evidence" className="mt-6">
+          {isAdmin && (
+            <div className="mb-4">
+              <UploadEvidenceDialog milestones={milestones} onDone={load} />
+            </div>
+          )}
           <div className="rounded-xl border border-slate-200 bg-white overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -262,6 +279,7 @@ export default function ProjectDetail() {
                   <Link to={`/verify/${project.id}/${pkg.id}`} data-testid={`verify-link-${pkg.package_code}`}>
                     <Button size="sm" variant="outline" className="text-xs"><ShieldCheck className="h-3.5 w-3.5" /> Verify</Button>
                   </Link>
+                  <VerifyQR projectId={project.id} packageId={pkg.id} packageCode={pkg.package_code} projectName={project.name} />
                   {isAdmin && !pkg.stellar_tx && (
                     <Button data-testid={`attest-${pkg.package_code}`} size="sm" disabled={busy} className="text-xs bg-emerald-600 hover:bg-emerald-500" onClick={() => attest(pkg.id, pkg.package_code)}>
                       Attest to Stellar
@@ -285,5 +303,94 @@ function OverviewTile({ icon: Icon, label, value }) {
       </div>
       <div className="mt-1.5 font-bold text-[#0B192C]">{value}</div>
     </div>
+  );
+}
+
+const DOC_TYPES = [
+  "Appropriation Ordinance", "Invitation to Bid", "Notice of Award", "Contract Agreement",
+  "Disbursement Voucher", "Notice to Proceed", "Inspection Report", "Accomplishment Report",
+  "Certificate of Completion", "Photo Documentation", "Other",
+];
+
+function UploadEvidenceDialog({ milestones, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [milestoneId, setMilestoneId] = useState("");
+  const [name, setName] = useState("");
+  const [docType, setDocType] = useState("Accomplishment Report");
+  const [file, setFile] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!milestoneId || !name || !file) {
+      toast.error("Select a milestone, enter a name, and choose a file.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", name);
+      fd.append("document_type", docType);
+      fd.append("file", file);
+      await api.post(`/milestones/${milestoneId}/evidence`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Evidence uploaded. SHA-256 generated; file stored off-chain.");
+      setOpen(false);
+      setName("");
+      setFile(null);
+      setMilestoneId("");
+      onDone();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Upload failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button data-testid="upload-evidence-button" className="bg-[#0B192C] hover:bg-[#1E293B]">
+          <Upload className="h-4 w-4" /> Upload Evidence
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md" data-testid="upload-evidence-dialog">
+        <DialogHeader>
+          <DialogTitle>Upload supporting evidence</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-1">
+          <div>
+            <Label className="text-xs font-semibold text-slate-600">Milestone</Label>
+            <Select value={milestoneId} onValueChange={setMilestoneId}>
+              <SelectTrigger data-testid="upload-milestone" className="mt-1"><SelectValue placeholder="Select milestone" /></SelectTrigger>
+              <SelectContent>
+                {milestones.map((m) => <SelectItem key={m.id} value={m.id}>{m.order}. {m.event}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-slate-600">Document name</Label>
+            <Input data-testid="upload-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Accomplishment Report — May 2026" className="mt-1" />
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-slate-600">Document type</Label>
+            <Select value={docType} onValueChange={setDocType}>
+              <SelectTrigger data-testid="upload-type" className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {DOC_TYPES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className="text-xs font-semibold text-slate-600">File (demo document)</Label>
+            <Input data-testid="upload-file" type="file" onChange={(e) => setFile(e.target.files?.[0] || null)} className="mt-1" />
+            <p className="text-xs text-slate-400 mt-1">Stored securely off-chain. Only the SHA-256 hash and metadata are published.</p>
+          </div>
+          <Button data-testid="upload-submit" onClick={submit} disabled={busy} className="w-full bg-emerald-600 hover:bg-emerald-500">
+            {busy ? "Uploading…" : "Upload & hash"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -1,4 +1,5 @@
 import asyncio
+import hashlib
 import logging
 import os
 import uuid
@@ -10,13 +11,16 @@ from dotenv import load_dotenv
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / ".env")
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException
+from fastapi import (APIRouter, Depends, FastAPI, File, Form, Header,
+                     HTTPException, Query, Response, UploadFile)
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel
 from starlette.middleware.cors import CORSMiddleware
 
 import evidence as ev
 import stellar_service as ss
+import storage_service as storage
+from auth import decode_token
 from auth import (create_access_token, get_current_user, hash_password,
                   require_roles, verify_password)
 
@@ -140,6 +144,7 @@ async def get_project(project_id: str):
     # strip private fields from public evidence view
     for e in evidence:
         e.pop("_original_name", None)
+        e.pop("storage_path", None)
     packages = await db.packages.find({"project_id": project_id}, NO_ID).to_list(50)
     for pkg in packages:
         pkg.pop("canonical_json", None)
@@ -351,9 +356,88 @@ async def demo_restore(package_id: str, user: dict = Depends(require_roles(ROLE_
     return {"ok": True, "message": "Evidence metadata restored."}
 
 
+# ---------- Evidence upload (admin, off-chain storage) ----------
+@api.post("/milestones/{milestone_id}/evidence")
+async def upload_evidence(
+    milestone_id: str,
+    name: str = Form(...),
+    document_type: str = Form(...),
+    file: UploadFile = File(...),
+    user: dict = Depends(require_roles(ROLE_ADMIN)),
+):
+    milestone = await db.milestones.find_one({"id": milestone_id}, NO_ID)
+    if not milestone:
+        raise HTTPException(404, "Milestone not found")
+    data = await file.read()
+    if not data:
+        raise HTTPException(400, "Empty file")
+    sha = hashlib.sha256(data).hexdigest()
+    ext = file.filename.rsplit(".", 1)[-1].lower() if file.filename and "." in file.filename else "bin"
+    path = f"{storage.APP_NAME}/evidence/{milestone['project_id']}/{uuid.uuid4()}.{ext}"
+    content_type = file.content_type or storage.mime_for(file.filename or "file")
+    try:
+        result = await asyncio.to_thread(storage.put_object, path, data, content_type)
+    except Exception as exc:
+        logger.exception("Storage upload failed")
+        raise HTTPException(502, f"Storage upload failed: {type(exc).__name__}")
+    doc = {
+        "id": nid(), "project_id": milestone["project_id"], "milestone_id": milestone_id,
+        "name": name, "document_type": document_type,
+        "uploaded_date": datetime.now(timezone.utc).date().isoformat(),
+        "sha256": sha, "status": "Submitted", "stellar_status": "Not Attested", "stellar_tx": None,
+        "content_note": "Sensitive contents stored off-chain.",
+        "storage_path": result["path"], "original_filename": file.filename,
+        "content_type": content_type, "size": result.get("size", len(data)),
+        "is_demo": False, "created_at": now_iso(),
+    }
+    await db.evidence.insert_one(doc)
+    await write_audit("EVIDENCE_UPLOADED", user, project_id=milestone["project_id"],
+                      milestone_id=milestone_id, result=f"{name} ({sha[:12]}…)")
+    doc.pop("_id", None)
+    doc.pop("storage_path", None)
+    return doc
+
+
+@api.get("/evidence/{evidence_id}/download")
+async def download_evidence(evidence_id: str, authorization: str | None = Header(default=None),
+                            auth: str | None = Query(default=None)):
+    token = None
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization[7:]
+    elif auth:
+        token = auth
+    if not token:
+        raise HTTPException(401, "Not authenticated")
+    decode_token(token)  # any authenticated staff role may download
+    e = await db.evidence.find_one({"id": evidence_id}, NO_ID)
+    if not e or not e.get("storage_path"):
+        raise HTTPException(404, "File not available")
+    data, content_type = await asyncio.to_thread(storage.get_object, e["storage_path"])
+    return Response(content=data, media_type=e.get("content_type", content_type))
+
+
+# ---------- LGU pilot requests ----------
+class PilotReq(BaseModel):
+    full_name: str
+    position: str | None = None
+    organization: str
+    email: str
+    location: str | None = None
+    interest: str | None = None
+    message: str | None = None
+
+
+@api.post("/pilot")
+async def pilot_request(req: PilotReq):
+    doc = {"id": nid(), **req.model_dump(), "created_at": now_iso(), "status": "new"}
+    await db.pilot_requests.insert_one(doc)
+    doc.pop("_id", None)
+    return {"ok": True, "message": "Pilot access request received.", "id": doc["id"]}
+
+
 @api.get("/")
 async def root():
-    return {"service": "ISLA Proof", "network": "stellar-testnet", "status": "ok"}
+    return {"service": "TALA", "org": "ISLA Camp Center, Inc.", "network": "stellar-testnet", "status": "ok"}
 
 
 app.include_router(api)
@@ -388,6 +472,11 @@ async def seed_users():
 @app.on_event("startup")
 async def on_startup():
     await seed_users()
+    try:
+        await asyncio.to_thread(storage.init_storage)
+        logger.info("Object storage initialized")
+    except Exception as exc:
+        logger.warning("Storage init failed (uploads may be unavailable): %s", exc)
 
 
 @app.on_event("shutdown")

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import api from "@/lib/api";
 import { shortHash, formatDateTime } from "@/lib/format";
 import { StatusBadge } from "@/components/StatusBadge";
+import { VerifyQR } from "@/components/VerifyQR";
 import { Button } from "@/components/ui/button";
 
 export default function ManagePackages() {
@@ -72,6 +73,9 @@ export default function ManagePackages() {
                       <Link to={`/verify/${pkg.project_id}/${pkg.id}`}>
                         <Button size="sm" variant="outline" className="text-xs"><ShieldCheck className="h-3.5 w-3.5" /> Verify</Button>
                       </Link>
+                      {pkg.stellar_tx && (
+                        <VerifyQR projectId={pkg.project_id} packageId={pkg.id} packageCode={pkg.package_code} projectName={pkg.project_name} />
+                      )}
                       {!pkg.stellar_tx && (
                         <Button data-testid={`manage-attest-${pkg.package_code}`} size="sm" disabled={busy === pkg.id} className="text-xs bg-emerald-600 hover:bg-emerald-500" onClick={() => attest(pkg)}>
                           Attest

@@ -17,6 +17,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { HashBlock } from "@/components/HashBlock";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
+import { VerifyQR } from "@/components/VerifyQR";
 
 export default function VerifyPage() {
   const { projectId, packageId } = useParams();
@@ -208,6 +209,9 @@ function VerifyResult({ projectId, packageId }) {
         <Button data-testid="reverify-button" variant="outline" onClick={load}>
           <RefreshCw className="h-4 w-4" /> Re-verify
         </Button>
+        {res.stellar_tx && (
+          <VerifyQR projectId={projectId} packageId={packageId} packageCode={res.package_code} projectName={res.project_name} />
+        )}
       </div>
 
       {/* Admin demo controls */}
@@ -232,7 +236,7 @@ function VerifyResult({ projectId, packageId }) {
       )}
 
       <p className="text-xs text-slate-400 mt-6 leading-relaxed">
-        ISLA Proof verifies the integrity of the specific evidence package that was attested. It
+        TALA verifies the integrity of the specific evidence package that was attested. It
         does not assert the truthfulness of the underlying statements, nor does it provide legal
         compliance. DEMO / SYNTHETIC data.
       </p>

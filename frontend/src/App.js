@@ -1,10 +1,12 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/sonner";
-import PublicPortal from "@/pages/PublicPortal";
+import Home from "@/pages/Home";
+import ProjectsPage from "@/pages/ProjectsPage";
 import ProjectDetail from "@/pages/ProjectDetail";
 import VerifyPage from "@/pages/VerifyPage";
 import Login from "@/pages/Login";
@@ -18,6 +20,21 @@ function Protected({ children, roles }) {
   if (!user) return <Navigate to="/login" replace />;
   if (roles && !roles.includes(user.role)) return <Navigate to="/dashboard" replace />;
   return children;
+}
+
+function ScrollManager() {
+  const { pathname, hash } = useLocation();
+  useEffect(() => {
+    if (hash) {
+      const el = document.getElementById(hash.slice(1));
+      if (el) {
+        setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+        return;
+      }
+    }
+    window.scrollTo(0, 0);
+  }, [pathname, hash]);
+  return null;
 }
 
 function Layout({ children }) {
@@ -34,9 +51,11 @@ function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <ScrollManager />
         <Layout>
           <Routes>
-            <Route path="/" element={<PublicPortal />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/projects" element={<ProjectsPage />} />
             <Route path="/project/:id" element={<ProjectDetail />} />
             <Route path="/verify" element={<VerifyPage />} />
             <Route path="/verify/:projectId/:packageId" element={<VerifyPage />} />
