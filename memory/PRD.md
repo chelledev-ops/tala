@@ -22,7 +22,7 @@ ISLA Proof is a Stellar-native verification and transparency platform for Philip
 - Append-only audit trail. Philippine peso formatting. Sensitive data off-chain.
 
 ## Implemented (2026-06)
-- [x] Data model: users, lgus, projects, milestones, evidence, packages, audit_trail.
+- [x] Data model: users, lgus, projects, milestones, evidence, packages, audit_trail, pilot_requests.
 - [x] Project lifecycle (9-stage milestone timeline), evidence per milestone.
 - [x] Deterministic canonicalization + SHA-256 engine (`evidence.py`) with automated tests.
 - [x] Evidence package generation + verification logic (recompute vs on-chain).
@@ -33,6 +33,14 @@ ISLA Proof is a Stellar-native verification and transparency platform for Philip
 - [x] Demo tamper/restore endpoints + admin controls on verify page.
 - [x] Seed: 5 LGUs, 15 projects, 79 milestones, 67 evidence, 6 packages (3 VERIFIED, 1 TAMPERED, 2 NOT_ATTESTED). All labeled DEMO/SYNTHETIC.
 - [x] Automated tests: canonicalization, hashing, verification, API workflow (28 passing).
+
+## Refinement — TALA rebrand (2026-06)
+- [x] Rebranded public product to **TALA — Verifiable Public Projects**, powered by ISLA Camp Center, Inc. New geometric logo (T + star + record), favicon, metadata. Backend/DB identifiers unchanged.
+- [x] New marketing homepage at `/`: Hero, How It Works (Record→Review→Anchor→Verify), Features (TALA Record/Proof/Anchor/Verify/Trace/Public), Built for LGUs, Why Stellar (+ integrity limitation disclaimer), Featured Demo Project, Join the LGU Pilot form, FAQ, Contact. Project browse moved to `/projects`.
+- [x] Evidence uploads: LGU Administrators attach demo documents to milestones; files stored off-chain in Emergent object storage; backend computes SHA-256 of file bytes; public sees only metadata + hash (storage_path never exposed); authenticated-only download endpoint.
+- [x] Verification QR: printable QR per attested package (on project detail, Manage Packages, and verify result) linking to the public `/verify/:projectId/:packageId` page.
+- [x] LGU Pilot signups stored in `pilot_requests` (no third-party service).
+- [x] Tests: 32 passing (10 new feature + 22 regression); all frontend flows green.
 
 ## Backlog (NOT built — future modules)
 - P1: Freighter wallet-signing flow (user-signed XDR).

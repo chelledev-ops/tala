@@ -1,0 +1,31 @@
+{
+  "summary": "Iteration 2 — TALA refinement. Backend: 10/10 new feature tests + 22/22 regression tests pass against public URL. Pilot signup accepts valid payload and 422s on missing required fields. Evidence upload (POST /api/milestones/{id}/evidence) requires admin: no-token=401, reviewer=403, auditor=403, admin=200 with 64-char sha256 matching file bytes and status='Submitted'. storage_path and _original_name are NOT exposed in POST response or GET /api/projects/{id}. Download GET /api/evidence/{id}/download: 401 without token, 200 with admin bearer returning exact bytes, 200 with auditor (any authenticated staff). Regression preserved: dashboard stats, projects list/q/status, verify VERIFIED (001/002/003), TAMPERED (004), NOT_ATTESTED (005/006), RBAC on package creation/attestation/review, tamper/restore cycle. Frontend: Home '/' renders TALA brand hero (Public projects. Verifiable records.), nav shows Projects|How It Works|Features|For LGUs|FAQ|Contact + Join the LGU Pilot + Staff Login, all feature sections (TALA Record/Proof/Anchor/Verify/Trace/Public), Why Stellar, Featured Demo, FAQ, Contact; pilot form submits with data-testid pilot-full-name/organization/email/interest/submit and pilot-success banner 'Request received' appears. /projects shows 15 card links; project detail (San Isidro PRJ-SI-2026-001) loads with Timeline/Evidence/Evidence Packages tabs. On Evidence Packages tab, qr-button-PKG-2026-001 opens qr-dialog containing a <canvas> and qr-print-button. Admin login flow (admin@isla.gov.ph/Admin@123) → /dashboard. Upload Evidence dialog on Evidence tab exposes upload-milestone, upload-name, upload-type, upload-file, upload-submit — successfully uploaded a text file; toast shows 'Evidence uploaded. SHA-256 generated; file stored off-chain' and new row appears in evidence list with Submitted status. /verify directory lists packages with data-testid verify-dir-<code>; clicking PKG-2026-001 shows verify-result-banner (data-result=VERIFIED), side-by-side SHA-256 comparison, Stellar explorer link, and a qr-button on the result page (opens qr-dialog with Print button).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_new_features.py",
+    "/app/backend/tests/test_api.py",
+    "/app/test_reports/pytest/new_features.xml",
+    "/app/test_reports/pytest/regression.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Pilot form submits even when the 'interest' Select is empty (field is optional on backend and no client-side validation). Not a bug per spec, but consider marking required or defaulting.",
+    "QR buttons are only rendered on 'Evidence Packages' tab of project detail (not Timeline) — expected and correct, confirmed via UI.",
+    "Project detail page shows a brief 'Loading project…' state. The initial /api/projects/{id} can take ~2–3s on cold calls; consider skeleton loaders."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_new_features.py"
+  ],
+  "success_rate": {"backend": "100% (32/32: 10 new + 22 regression)", "frontend": "100% of flows exercised"},
+  "test_credentials": "admin@isla.gov.ph/Admin@123, reviewer@isla.gov.ph/Review@123, auditor@isla.gov.ph/Audit@123",
+  "seed_data_creation": "Created one TEST pilot_request entry (pilot_pw_<ts>@example.com) and one TEST evidence record on PRJ-SI-2026-001 ('TEST Playwright Upload') via admin UI; also several TEST_* evidence/pilot records via pytest. No real Stellar attestations were performed in this iteration (no /packages/{id}/attest calls).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend fully green. All new endpoints (pilot, upload evidence, download evidence) covered in /app/backend/tests/test_new_features.py. Note storage_path and _original_name must stay stripped from any project/evidence response. QR buttons live on project 'Evidence Packages' tab, Manage Packages (staff), and VerifyPage result view. Verify directory items use data-testid='verify-dir-<package_code>' (not 'verify-link-*'). pilot-interest field is a Radix Select, not a native select — use .click + role=option.",
+  "rca of the issue": "No bugs found."
+}
