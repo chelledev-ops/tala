@@ -20,27 +20,42 @@ export function VerifyQR({ projectId, packageId, packageCode, projectName }) {
     const dataUrl = canvas.toDataURL("image/png");
     const w = window.open("", "_blank", "width=480,height=640");
     if (!w) return;
-    w.document.write(`
-      <html><head><title>${packageCode} — Verify</title>
-      <style>
-        body{font-family:-apple-system,Segoe UI,sans-serif;text-align:center;padding:40px;color:#0B192C}
-        .tag{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#64748b}
-        h1{font-size:22px;margin:6px 0 2px}
-        .code{font-family:monospace;color:#059669;font-weight:700}
-        img{width:300px;height:300px;margin:24px auto;display:block;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
-        .url{font-family:monospace;font-size:11px;color:#64748b;word-break:break-all}
-        .foot{margin-top:18px;font-size:11px;color:#94a3b8}
-      </style></head>
-      <body>
-        <div class="tag">Scan to verify project record</div>
-        <h1>${projectName || "Public Project"}</h1>
-        <div class="code">${packageCode}</div>
-        <img src="${dataUrl}" />
-        <div class="url">${url}</div>
-        <div class="foot">TALA · Verifiable Public Projects · Powered by ISLA Camp Center, Inc.</div>
-        <script>window.onload=function(){setTimeout(function(){window.print()},250)}</script>
-      </body></html>`);
-    w.document.close();
+
+    const doc = w.document;
+    doc.title = `${packageCode} — Verify`;
+
+    const style = doc.createElement("style");
+    style.textContent = `
+      body{font-family:-apple-system,Segoe UI,sans-serif;text-align:center;padding:40px;color:#0B192C}
+      .tag{font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:#64748b}
+      h1{font-size:22px;margin:6px 0 2px}
+      .code{font-family:monospace;color:#059669;font-weight:700}
+      img{width:300px;height:300px;margin:24px auto;display:block;border:1px solid #e2e8f0;border-radius:12px;padding:12px}
+      .url{font-family:monospace;font-size:11px;color:#64748b;word-break:break-all}
+      .foot{margin-top:18px;font-size:11px;color:#94a3b8}`;
+    doc.head.appendChild(style);
+
+    // Build nodes with textContent so project-supplied values can never be
+    // interpreted as markup (safe alternative to document.write interpolation).
+    const el = (tag, cls, text) => {
+      const node = doc.createElement(tag);
+      if (cls) node.className = cls;
+      if (text != null) node.textContent = text;
+      return node;
+    };
+    const body = doc.body;
+    body.appendChild(el("div", "tag", "Scan to verify project record"));
+    body.appendChild(el("h1", null, projectName || "Public Project"));
+    body.appendChild(el("div", "code", packageCode));
+    const img = doc.createElement("img");
+    img.src = dataUrl;
+    img.alt = "Verification QR";
+    body.appendChild(img);
+    body.appendChild(el("div", "url", url));
+    body.appendChild(el("div", "foot", "TALA · Verifiable Public Projects · Powered by ISLA Camp Center, Inc."));
+
+    w.focus();
+    setTimeout(() => w.print(), 250);
   };
 
   return (

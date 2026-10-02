@@ -52,7 +52,7 @@ def test_pilot_submit_public(s):
     r = s.post(f"{API}/pilot", json=payload, timeout=20)
     assert r.status_code in (200, 201), r.text
     d = r.json()
-    assert d.get("ok") is True
+    assert d.get("ok") == True  # noqa: E712 — value comparison, not identity
     assert isinstance(d.get("id"), str) and len(d["id"]) > 0
 
 
