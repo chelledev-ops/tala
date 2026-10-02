@@ -144,7 +144,8 @@ async def get_project(project_id: str):
     # strip private fields from public evidence view
     for e in evidence:
         e.pop("_original_name", None)
-        e.pop("storage_path", None)
+        has_file = bool(e.pop("storage_path", None))
+        e["has_file"] = has_file
     packages = await db.packages.find({"project_id": project_id}, NO_ID).to_list(50)
     for pkg in packages:
         pkg.pop("canonical_json", None)
@@ -176,6 +177,7 @@ class CreatePackageReq(BaseModel):
     project_id: str
     milestone_id: str | None = None
     package_code: str | None = None
+    document_ids: list[str] | None = None
 
 
 @api.post("/packages")
@@ -186,10 +188,16 @@ async def create_package(req: CreatePackageReq, user: dict = Depends(require_rol
     milestone = None
     if req.milestone_id:
         milestone = await db.milestones.find_one({"id": req.milestone_id}, NO_ID)
-    q = {"project_id": req.project_id}
-    if req.milestone_id:
-        q["milestone_id"] = req.milestone_id
-    docs = await db.evidence.find(q, NO_ID).to_list(200)
+    if req.document_ids:
+        # Explicit multi-document selection (validated to belong to this project).
+        docs = await db.evidence.find(
+            {"id": {"$in": req.document_ids}, "project_id": req.project_id}, NO_ID
+        ).to_list(200)
+    else:
+        q = {"project_id": req.project_id}
+        if req.milestone_id:
+            q["milestone_id"] = req.milestone_id
+        docs = await db.evidence.find(q, NO_ID).to_list(200)
     if not docs:
         raise HTTPException(400, "No evidence available for this scope")
     canonical, pkg_hash = ev.compute_package_hash(project, milestone, docs)
@@ -433,6 +441,11 @@ async def pilot_request(req: PilotReq):
     await db.pilot_requests.insert_one(doc)
     doc.pop("_id", None)
     return {"ok": True, "message": "Pilot access request received.", "id": doc["id"]}
+
+
+@api.get("/pilot")
+async def list_pilot_requests(user: dict = Depends(require_roles(ROLE_ADMIN))):
+    return await db.pilot_requests.find({}, NO_ID).sort("created_at", -1).to_list(500)
 
 
 @api.get("/")

@@ -13,6 +13,8 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import AuditTrail from "@/pages/AuditTrail";
 import ManagePackages from "@/pages/ManagePackages";
+import Signboard from "@/pages/Signboard";
+import PilotInbox from "@/pages/PilotInbox";
 
 function Protected({ children, roles }) {
   const { user, ready } = useAuth();
@@ -59,10 +61,12 @@ function App() {
             <Route path="/project/:id" element={<ProjectDetail />} />
             <Route path="/verify" element={<VerifyPage />} />
             <Route path="/verify/:projectId/:packageId" element={<VerifyPage />} />
+            <Route path="/signboard/:projectId" element={<Signboard />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Protected><Dashboard /></Protected>} />
             <Route path="/audit" element={<Protected><AuditTrail /></Protected>} />
             <Route path="/manage" element={<Protected roles={["LGU Administrator"]}><ManagePackages /></Protected>} />
+            <Route path="/pilot-inbox" element={<Protected roles={["LGU Administrator"]}><PilotInbox /></Protected>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Layout>

@@ -15,6 +15,8 @@ import {
   ExternalLink,
   Plus,
   Upload,
+  Printer,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/lib/api";
@@ -28,6 +30,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -36,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { VerifyQR } from "@/components/VerifyQR";
+import { EvidencePreviewDialog } from "@/components/EvidencePreviewDialog";
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -53,25 +57,13 @@ export default function ProjectDetail() {
 
   const isAdmin = user && user.role === "LGU Administrator";
   const isReviewer = user && user.role === "LGU Reviewer";
+  const isStaff = !!user;
 
   if (!data) {
     return <div className="max-w-7xl mx-auto px-4 py-20 text-slate-400">Loading project…</div>;
   }
 
   const { project, milestones, evidence, packages } = data;
-
-  const createPackage = async () => {
-    setBusy(true);
-    try {
-      const { data: pkg } = await api.post("/packages", { project_id: project.id });
-      toast.success(`Package ${pkg.package_code} created. SHA-256 generated.`);
-      load();
-    } catch (e) {
-      toast.error(e.response?.data?.detail || "Failed to create package");
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const attest = async (pkgId, code) => {
     setBusy(true);
@@ -99,9 +91,14 @@ export default function ProjectDetail() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
-      <Link to="/" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-[#0B192C] mb-5">
-        <ArrowLeft className="h-4 w-4" /> Back to projects
-      </Link>
+      <div className="flex items-center justify-between mb-5">
+        <Link to="/projects" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-[#0B192C]">
+          <ArrowLeft className="h-4 w-4" /> Back to projects
+        </Link>
+        <Link to={`/signboard/${id}`} data-testid="project-signboard-link">
+          <Button size="sm" variant="outline"><Printer className="h-4 w-4" /> Signboard</Button>
+        </Link>
+      </div>
 
       {/* Header */}
       <div className="rounded-2xl bg-[#0B192C] text-white p-6 sm:p-8 isla-grid relative overflow-hidden">
@@ -210,6 +207,7 @@ export default function ProjectDetail() {
                     <th className="text-left px-4 py-3 font-semibold hidden md:table-cell">SHA-256</th>
                     <th className="text-left px-4 py-3 font-semibold">Status</th>
                     <th className="text-left px-4 py-3 font-semibold">Stellar</th>
+                    {isStaff && <th className="text-left px-4 py-3 font-semibold">File</th>}
                     {isReviewer && <th className="px-4 py-3" />}
                   </tr>
                 </thead>
@@ -223,6 +221,15 @@ export default function ProjectDetail() {
                       </td>
                       <td className="px-4 py-3"><StatusBadge status={e.status} /></td>
                       <td className="px-4 py-3"><StatusBadge status={e.stellar_status} /></td>
+                      {isStaff && (
+                        <td className="px-4 py-3">
+                          {e.has_file ? (
+                            <EvidencePreviewDialog evidence={e} />
+                          ) : (
+                            <span className="text-xs text-slate-400">No file</span>
+                          )}
+                        </td>
+                      )}
                       {isReviewer && (
                         <td className="px-4 py-3">
                           <div className="flex gap-1.5">
@@ -246,9 +253,7 @@ export default function ProjectDetail() {
         <TabsContent value="packages" className="mt-6">
           {isAdmin && (
             <div className="mb-4">
-              <Button data-testid="create-package-button" onClick={createPackage} disabled={busy} className="bg-[#0B192C] hover:bg-[#1E293B]">
-                <Plus className="h-4 w-4" /> Generate Evidence Package
-              </Button>
+              <CreatePackageDialog project={project} milestones={milestones} evidence={evidence} onDone={load} />
             </div>
           )}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -388,6 +393,114 @@ function UploadEvidenceDialog({ milestones, onDone }) {
           </div>
           <Button data-testid="upload-submit" onClick={submit} disabled={busy} className="w-full bg-emerald-600 hover:bg-emerald-500">
             {busy ? "Uploading…" : "Upload & hash"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
+function CreatePackageDialog({ project, milestones, evidence, onDone }) {
+  const [open, setOpen] = useState(false);
+  const [milestoneId, setMilestoneId] = useState("all");
+  const [selected, setSelected] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  const scoped = milestoneId === "all" ? evidence : evidence.filter((e) => e.milestone_id === milestoneId);
+
+  const toggle = (id) =>
+    setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+
+  const selectedDocs = evidence.filter((e) => selected.includes(e.id));
+
+  const submit = async () => {
+    if (selected.length === 0) {
+      toast.error("Select at least one document to include.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const body = { project_id: project.id, document_ids: selected };
+      if (milestoneId !== "all") body.milestone_id = milestoneId;
+      const { data: pkg } = await api.post("/packages", body);
+      toast.success(`Package ${pkg.package_code} created from ${selected.length} document(s). SHA-256 generated.`);
+      setOpen(false);
+      setSelected([]);
+      setMilestoneId("all");
+      onDone();
+    } catch (e) {
+      toast.error(e.response?.data?.detail || "Failed to create package");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button data-testid="create-package-button" className="bg-[#0B192C] hover:bg-[#1E293B]">
+          <Plus className="h-4 w-4" /> Generate Evidence Package
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-lg" data-testid="create-package-dialog">
+        <DialogHeader>
+          <DialogTitle>Build an evidence package</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-1">
+          <div>
+            <Label className="text-xs font-semibold text-slate-600">Milestone scope</Label>
+            <Select value={milestoneId} onValueChange={(v) => { setMilestoneId(v); setSelected([]); }}>
+              <SelectTrigger data-testid="package-milestone" className="mt-1"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Whole project (all milestones)</SelectItem>
+                {milestones.map((m) => <SelectItem key={m.id} value={m.id}>{m.order}. {m.event}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <Label className="text-xs font-semibold text-slate-600">Select documents ({selected.length})</Label>
+              <button
+                type="button"
+                data-testid="package-select-all"
+                className="text-xs font-semibold text-emerald-700 hover:underline"
+                onClick={() => setSelected(scoped.map((e) => e.id))}
+              >
+                Select all
+              </button>
+            </div>
+            <div className="max-h-56 overflow-y-auto rounded-lg border border-slate-200 divide-y divide-slate-100">
+              {scoped.length === 0 && <div className="px-3 py-4 text-sm text-slate-400">No evidence in this scope.</div>}
+              {scoped.map((e) => (
+                <label key={e.id} data-testid={`package-doc-${e.id}`} className="flex items-start gap-3 px-3 py-2.5 cursor-pointer hover:bg-slate-50">
+                  <Checkbox checked={selected.includes(e.id)} onCheckedChange={() => toggle(e.id)} className="mt-0.5" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-[#0B192C] truncate">{e.name}</div>
+                    <div className="text-xs text-slate-400 font-mono">{e.document_type} · {shortHash(e.sha256, 8, 6)}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {selectedDocs.length > 0 && (
+            <div className="rounded-lg bg-slate-50 border border-slate-200 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">
+                Will be anchored ({selectedDocs.length})
+              </div>
+              <ul className="text-xs text-slate-600 space-y-0.5 list-disc list-inside">
+                {selectedDocs.map((d) => <li key={d.id} className="truncate">{d.name}</li>)}
+              </ul>
+              <p className="text-[11px] text-slate-400 mt-2">
+                Documents are canonicalized in deterministic order, so the SHA-256 commitment is reproducible.
+              </p>
+            </div>
+          )}
+
+          <Button data-testid="package-submit" onClick={submit} disabled={busy} className="w-full bg-emerald-600 hover:bg-emerald-500">
+            {busy ? "Generating…" : "Generate package & SHA-256"}
           </Button>
         </div>
       </DialogContent>

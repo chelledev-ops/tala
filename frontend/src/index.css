@@ -76,3 +76,14 @@ code,
         display: contents !important;
     }
 }
+
+@media print {
+    nav,
+    footer,
+    .no-print {
+        display: none !important;
+    }
+    body {
+        background: #fff !important;
+    }
+}

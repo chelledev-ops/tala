@@ -112,7 +112,7 @@ def make_project(lgu, spec_name, value, status, progress, contractor, funding, l
         "target_completion": target,
         "status": status,
         "progress": progress,
-        "description": f"{spec_name} — a public infrastructure undertaking of {lgu['name']}. SYNTHETIC / DEMO project record created for ISLA Proof verification demonstration.",
+        "description": f"{spec_name} — a public infrastructure undertaking of {lgu['name']}. SYNTHETIC / DEMO project record created for TALA verification demonstration.",
         "is_demo": True,
         "created_at": now_iso(),
     }

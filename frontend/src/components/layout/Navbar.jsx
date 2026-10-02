@@ -1,5 +1,5 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
-import { LogOut, LayoutDashboard, ScrollText, FolderCog, Menu, X } from "lucide-react";
+import { LogOut, LayoutDashboard, ScrollText, FolderCog, Menu, X, Inbox } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -59,6 +59,9 @@ export function Navbar() {
                 {isAdmin && (
                   <Link to="/manage" data-testid="nav-manage" className="text-sm font-semibold text-slate-500 hover:text-[#0B192C]">Packages</Link>
                 )}
+                {isAdmin && (
+                  <Link to="/pilot-inbox" data-testid="nav-pilot-inbox" className="text-sm font-semibold text-slate-500 hover:text-[#0B192C]">Pilot Inbox</Link>
+                )}
                 <Link to="/audit" data-testid="nav-audit" className="text-sm font-semibold text-slate-500 hover:text-[#0B192C]">Audit Trail</Link>
               </>
             )}
@@ -107,6 +110,9 @@ export function Navbar() {
               <Link to="/dashboard" onClick={() => setOpen(false)} className="flex items-center gap-2 py-2 text-sm font-semibold text-slate-700"><LayoutDashboard className="h-4 w-4" /> Dashboard</Link>
               {isAdmin && (
                 <Link to="/manage" onClick={() => setOpen(false)} className="flex items-center gap-2 py-2 text-sm font-semibold text-slate-700"><FolderCog className="h-4 w-4" /> Packages</Link>
+              )}
+              {isAdmin && (
+                <Link to="/pilot-inbox" onClick={() => setOpen(false)} className="flex items-center gap-2 py-2 text-sm font-semibold text-slate-700"><Inbox className="h-4 w-4" /> Pilot Inbox</Link>
               )}
               <Link to="/audit" onClick={() => setOpen(false)} className="flex items-center gap-2 py-2 text-sm font-semibold text-slate-700"><ScrollText className="h-4 w-4" /> Audit Trail</Link>
             </>
