@@ -1,0 +1,106 @@
+{
+  "project_name": "ISLA Proof",
+  "archetype": "Civic-Tech & Institutional Swiss Transparency Hybrid (ARCHETYPE 4 + ARCHETYPE 1)",
+  "primary_messaging": {
+    "headline": "Public projects. Verifiable records.",
+    "subtext": "ISLA Proof creates a cryptographic record of project evidence and anchors its integrity to Stellar."
+  },
+  "tone_and_voice": {
+    "style": "Government-grade, objective, clean, high-trust, audit-ready",
+    "forbidden_phrases": [
+      "corruption-proof",
+      "fraud-proof",
+      "guaranteed transparency",
+      "crypto moon",
+      "web3 revolution"
+    ]
+  },
+  "theme": {
+    "default_mode": "light",
+    "support_toggle": true,
+    "background_base": "bg-[#F8FAF9] dark:bg-[#090D14]",
+    "surface_cards": "bg-white dark:bg-[#111827]",
+    "borders": "border-slate-200 dark:border-slate-800"
+  },
+  "colors": {
+    "primary_navy": "#0B192C",
+    "primary_navy_hover": "#1E293B",
+    "emerald_verified": "#059669",
+    "emerald_verified_light": "#ECFDF5",
+    "amber_unattested": "#D97706",
+    "amber_unattested_light": "#FFFBEB",
+    "crimson_tampered": "#DC2626",
+    "crimson_tampered_light": "#FEF2F2",
+    "stellar_blue": "#2563EB",
+    "philippines_sun_gold": "#B45309",
+    "slate_neutral_dark": "#0F172A",
+    "slate_neutral_muted": "#64748B",
+    "stone_surface_light": "#F1F5F9"
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Plus Jakarta Sans, Outfit, sans-serif",
+      "weights": "font-bold font-extrabold",
+      "letter_spacing": "tracking-tight",
+      "hero_h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight text-slate-900 dark:text-white font-extrabold",
+      "section_h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight text-slate-900 dark:text-white font-bold",
+      "card_h3": "text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100"
+    },
+    "body": {
+      "font_family": "Plus Jakarta Sans, Inter, sans-serif",
+      "size": "text-base text-slate-700 dark:text-slate-300 leading-relaxed"
+    },
+    "crypto_mono": {
+      "font_family": "JetBrains Mono, Source Code Pro, monospace",
+      "usage": "SHA-256 hashes, Stellar Ledger Sequence, Tx Hash, Merkle Roots",
+      "class": "font-mono text-xs sm:text-sm bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 tracking-wider break-all"
+    }
+  },
+  "layouts_and_grids": {
+    "public_portal_hero": "Split Swiss layout: Left side bold institutional title + LGU selector + Philippine Peso stats tile; Right side live interactive verification snippet or recent LGU milestone activity",
+    "dashboard_stats_grid": "High density grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6",
+    "project_lifecycle_timeline": "Vertical/Horizontal 9-Stage Milestone Track (Budget -> Procurement -> Award -> Contract -> Disbursement -> Implementation -> Inspection -> Completion -> Final Attestation)",
+    "verification_card": "Hero result banner with 3 distinct high-contrast states: VERIFIED (Emerald Shield), TAMPERED (Crimson Warning Alert), NOT ATTESTED (Amber Hourglass)"
+  },
+  "image_urls": {
+    "hero_infrastructure": [
+      {
+        "url": "https://images.unsplash.com/photo-1625119264099-17f9757291bc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwxfHxwaGlsaXBwaW5lcyUyMGJyaWRnZSUyMGNvbnN0cnVjdGlvbiUyMGhpZ2h3YXl8ZW58MHx8fHwxNzkwOTMwMzk5fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Philippine bridge infrastructure over waterway during daytime",
+        "usage": "Public project list hero or featured bridge rehabilitation card"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1655651381741-6e599389603a?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwyfHxwaGlsaXBwaW5lcyUyMGJyaWRnZSUyMGNvbnN0cnVjdGlvbiUyMGhpZ2h3YXl8ZW58MHx8fHwxNzkwOTMwMzk5fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Newly paved concrete road with side landscaping",
+        "usage": "Road rehabilitation project detail thumbnail"
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1597658706350-e2fb90863d7f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzV8MHwxfHNlYXJjaHwzfHxwaGlsaXBwaW5lcyUyMGJyaWRnZSUyMGNvbnN0cnVjdGlvbiUyMGhpZ2h3YXl8ZW58MHx8fHwxNzkwOTMwMzk5fDA&ixlib=rb-4.1.0&q=85",
+        "description": "Urban bridge structure with steel arches",
+        "usage": "LGU Infrastructure showcase banner"
+      }
+    ]
+  },
+  "component_guidelines": {
+    "navigation_bar": "Sticky fixed navbar with backdrop-blur-md bg-white/90 dark:bg-slate-900/90 border-b border-slate-200 dark:border-slate-800 z-50. Include LGU Seal badge, search input, Role switcher (Public / LGU Admin / Reviewer / Auditor), and Stellar Network indicator dot.",
+    "philippine_currency_formatting": "Always format money values with Philippine Peso symbol ₱ and comma separation e.g. ₱50,000,000.00",
+    "verification_badges": {
+      "verified": "bg-emerald-100 text-emerald-900 border-2 border-emerald-500 font-bold px-3 py-1 rounded-full text-xs uppercase tracking-wider flex items-center gap-1.5",
+      "tampered": "bg-red-100 text-red-900 border-2 border-red-500 font-bold px-3 py-1 rounded-full text-xs uppercase tracking-wider flex items-center gap-1.5",
+      "not_attested": "bg-amber-100 text-amber-900 border-2 border-amber-500 font-bold px-3 py-1 rounded-full text-xs uppercase tracking-wider flex items-center gap-1.5"
+    },
+    "audit_trail": "Append-only tabular timeline with actor role, timestamp, action name, document checksum hash, and direct link to Stellar Horizon Testnet explorer transaction."
+  },
+  "testing_requirements": {
+    "data_testid_rule": "MUST include data-testid attribute on all interactive elements, buttons, tabs, inputs, state badges, and hash displays using kebab-case (e.g. data-testid='verify-project-button', data-testid='lgu-selector-dropdown', data-testid='verification-status-badge')",
+    "react_js_file_extensions": "Use JavaScript / React JS (.js / .jsx) components"
+  },
+  "instructions_to_main_agent": [
+    "Ensure the UI feels like a modern official Philippine civic transparency platform (like COA / DPWH open portal elevated with high tech design).",
+    "Avoid generic AI slop: no dark neon gradients, no generic centered cards, no unformatted JSON dumps.",
+    "Make the verification flow at /verify/:projectId/:packageId extremely vivid and unambiguous: big status banner, SHA-256 side-by-side comparison, original hash vs computed hash, and Stellar transaction anchor link.",
+    "Include mock data with authentic Philippine LGUs (e.g., LGU Pasig City, LGU Naga City, LGU Iloilo City, LGU Davao City, LGU Bohol).",
+    "All monetary figures must use Philippine Peso format (₱50,000,000.00).",
+    "Every button, search input, filter, modal trigger, tab, and card must carry explicit data-testid attributes."
+  ]
+}
