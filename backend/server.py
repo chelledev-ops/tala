@@ -407,13 +407,10 @@ async def upload_evidence(
 
 
 @api.get("/evidence/{evidence_id}/download")
-async def download_evidence(evidence_id: str, authorization: str | None = Header(default=None),
-                            auth: str | None = Query(default=None)):
+async def download_evidence(evidence_id: str, authorization: str | None = Header(default=None)):
     token = None
     if authorization and authorization.startswith("Bearer "):
         token = authorization[7:]
-    elif auth:
-        token = auth
     if not token:
         raise HTTPException(401, "Not authenticated")
     decode_token(token)  # any authenticated staff role may download
