@@ -89,3 +89,11 @@ android-sdk/
 credentials.json
 *.key
 .credentials
+
+# TALA repo cleanup — platform/dev artifacts (keep local, exclude from repo)
+.emergent/
+.gitconfig
+memory/
+test_reports/
+test_result.md
+design_guidelines.json
