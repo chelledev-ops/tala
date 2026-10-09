@@ -1,65 +1,78 @@
-"""Emergent Object Storage helpers — stores evidence documents off-chain.
+"""S3-compatible object storage helpers for off-chain evidence files."""
 
-Only non-sensitive metadata + SHA-256 are ever exposed publicly. File contents
-are served only through an authenticated backend endpoint.
-"""
 import os
 
-import requests
+import boto3
+from botocore.config import Config
 
-STORAGE_BASE = (os.environ.get("INTEGRATION_PROXY_URL") or "").strip() or "https://integrations.emergentagent.com"
-STORAGE_URL = STORAGE_BASE.rstrip("/") + "/objstore/api/v1/storage"
-EMERGENT_KEY = os.environ.get("EMERGENT_LLM_KEY")
 APP_NAME = "tala"
 
-MIME_TYPES = {
-    "jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png",
-    "gif": "image/gif", "webp": "image/webp", "pdf": "application/pdf",
-    "json": "application/json", "csv": "text/csv", "txt": "text/plain",
-    "doc": "application/msword", "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-}
+S3_BUCKET = os.environ.get("S3_BUCKET")
+S3_ENDPOINT_URL = os.environ.get("S3_ENDPOINT_URL") or None
+AWS_REGION = os.environ.get("AWS_REGION", "us-east-1")
+S3_ADDRESSING_STYLE = os.environ.get("S3_ADDRESSING_STYLE", "auto")
 
-_storage_key = None
+_s3_client = None
 
 
 def init_storage(force: bool = False):
-    global _storage_key
-    if _storage_key and not force:
-        return _storage_key
-    resp = requests.post(f"{STORAGE_URL}/init", json={"emergent_key": EMERGENT_KEY}, timeout=30)
-    resp.raise_for_status()
-    _storage_key = resp.json()["storage_key"]
-    return _storage_key
+    """Initialize and return the S3-compatible storage client.
+
+    `force` is accepted for compatibility with the previous storage helper.
+    """
+    global _s3_client
+
+    if not S3_BUCKET:
+        raise RuntimeError("S3_BUCKET must be configured")
+
+    if _s3_client is None or force:
+        _s3_client = boto3.client(
+            "s3",
+            endpoint_url=S3_ENDPOINT_URL,
+            region_name=AWS_REGION,
+            config=Config(
+                s3={"addressing_style": S3_ADDRESSING_STYLE},
+            ),
+        )
+
+    return _s3_client
 
 
 def put_object(path: str, data: bytes, content_type: str) -> dict:
-    key = init_storage()
-    resp = requests.put(
-        f"{STORAGE_URL}/objects/{path}",
-        headers={"X-Storage-Key": key, "Content-Type": content_type},
-        data=data, timeout=120,
+    """Upload an evidence file and return its storage path and size."""
+    client = init_storage()
+    client.put_object(
+        Bucket=S3_BUCKET,
+        Key=path,
+        Body=data,
+        ContentType=content_type,
     )
-    if resp.status_code == 404:
-        key = init_storage(force=True)
-        resp = requests.put(
-            f"{STORAGE_URL}/objects/{path}",
-            headers={"X-Storage-Key": key, "Content-Type": content_type},
-            data=data, timeout=120,
-        )
-    resp.raise_for_status()
-    return resp.json()
+    return {"path": path, "size": len(data)}
 
 
 def get_object(path: str):
-    key = init_storage()
-    resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
-    if resp.status_code == 404:
-        key = init_storage(force=True)
-        resp = requests.get(f"{STORAGE_URL}/objects/{path}", headers={"X-Storage-Key": key}, timeout=60)
-    resp.raise_for_status()
-    return resp.content, resp.headers.get("Content-Type", "application/octet-stream")
+    """Return the evidence file contents and stored content type."""
+    client = init_storage()
+    response = client.get_object(Bucket=S3_BUCKET, Key=path)
+    return response["Body"].read(), response.get(
+        "ContentType", "application/octet-stream"
+    )
 
 
 def mime_for(filename: str) -> str:
-    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
-    return MIME_TYPES.get(ext, "application/octet-stream")
+    """Guess a content type from a filename."""
+    mime_types = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "gif": "image/gif",
+        "webp": "image/webp",
+        "pdf": "application/pdf",
+        "json": "application/json",
+        "csv": "text/csv",
+        "txt": "text/plain",
+        "doc": "application/msword",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+    extension = filename.rsplit(".", 1)[-1].lower() if "." in filename else "bin"
+    return mime_types.get(extension, "application/octet-stream")
