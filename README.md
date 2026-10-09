@@ -68,8 +68,21 @@ The demonstration scenario follows a project through milestone recording, eviden
 - **Frontend:** React application with public project and verification pages, QR links, and staff dashboards.
 - **Backend:** FastAPI service providing the application API, role-based access, evidence-package generation, SHA-256 calculation, Stellar Testnet submission, and verification.
 - **Database:** MongoDB stores application records and workflow history.
-- **Evidence storage:** Evidence files are stored off-chain using the configured object-storage integration.
+- **Evidence storage:** Evidence files are stored off-chain in a configured S3-compatible bucket.
 - **Stellar Testnet:** Records the package hash commitment associated with an attestation.
+
+## S3-compatible evidence storage
+
+Configure the backend with:
+
+- `S3_BUCKET` (required)
+- `AWS_REGION` (optional; defaults to `us-east-1`)
+- `S3_ENDPOINT_URL` (optional; set for S3-compatible providers other than AWS)
+- `S3_ADDRESSING_STYLE` (optional; defaults to `auto`; set to `path` if required by the provider)
+
+The backend uses the standard AWS credential provider chain. Use a deployment role with access limited to the evidence bucket where available, or provide credentials through the deployment environment or a local AWS profile. Never commit storage credentials.
+
+Before enabling this storage configuration for existing data, migrate the existing evidence objects to the configured bucket and update their stored paths. Changing the storage backend does not move existing files.
 
 ## Security boundaries
 
@@ -77,6 +90,7 @@ The demonstration scenario follows a project through milestone recording, eviden
 - Stellar receives the evidence-package hash commitment, not the complete evidence package.
 - Stellar signing credentials are configured server-side and must not be committed to the repository or exposed to the frontend.
 - The application is configured for Stellar Testnet. This README does not describe a production deployment or a compliance certification.
+- Control, evidence, hashing, attestation, and verification workflows use deterministic application logic and do not use AI or LLM services.
 
 ## Development
 
