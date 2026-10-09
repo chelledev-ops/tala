@@ -1,143 +1,86 @@
 # TALA — Verifiable Public Projects
 
-## Overview
+TALA is a civic-tech platform for recording public project milestones and organizing related evidence. It creates a deterministic SHA-256 commitment for an evidence package and records that commitment on Stellar Testnet so the package can be checked for changes.
 
-TALA is a civic-tech platform that helps Philippine Local Government Units (LGUs) record public project milestones and evidence, create deterministic cryptographic commitments, anchor evidence-package integrity to Stellar, and allow citizens and auditors to independently verify the resulting record.
+TALA is a transparency and verification tool. It does not replace government project, procurement, accounting, or records-management systems.
 
-TALA is a transparency and verification layer — not a replacement for existing government systems.
+## How it works
 
-## Core Flow
-
+```text
+Public project
+  → Milestones and evidence
+  → Evidence-package metadata and document digests
+  → Deterministic SHA-256 commitment
+  → Stellar Testnet transaction
+  → Public verification page
 ```
-LGU Project
-  → Evidence
-    → SHA-256
-      → Stellar
-        → Public Verification
-```
 
-## What TALA Does
+The Stellar transaction records the cryptographic commitment. Evidence documents remain off-chain.
 
-- Project lifecycle tracking
-- Milestone records
-- Evidence packages
-- Deterministic SHA-256 integrity commitments
-- Stellar Testnet anchoring
-- Public verification
-- QR-based verification
-- Tamper detection
-- Append-only audit trail
+## Features
 
-## What TALA Does NOT Do
+- Project and milestone tracking
+- Evidence-package creation
+- Deterministic SHA-256 commitments
+- Stellar Testnet attestation
+- Public verification pages and QR links
+- Tamper and mismatch detection
+- Role-based staff access
+- Audit history for relevant workflow actions
 
-- Does not replace an LGU ERP
-- Does not replace procurement or accounting systems
-- Does not store sensitive government documents on-chain
-- Does not require citizens to own cryptocurrency
-- Does not require citizens to use a crypto wallet
-- Does not determine whether government information is legally compliant or truthful
+## What TALA does not do
 
-> Blockchain verification proves the integrity of the attested evidence package — **not** the truth or legal sufficiency of the underlying documents.
+- Replace an LGU’s existing enterprise, procurement, or accounting systems
+- Store full evidence documents or sensitive records on Stellar
+- Require the public to own cryptocurrency or use a wallet to view a verification page
+- Determine whether a document is true, legally sufficient, or proof of regulatory compliance
 
-## Stellar
+> A matching hash demonstrates that the checked package produces the same cryptographic commitment recorded for it. It does not establish the truth or legal sufficiency of the underlying information.
 
-TALA uses Stellar as a **public integrity layer**. Sensitive documents always remain **off-chain**.
+## Stellar and data handling
 
-For each evidence package, TALA canonicalizes the non-sensitive metadata and document digests deterministically, computes a **SHA-256 commitment**, and anchors only that commitment to **Stellar Testnet** (never sensitive content or personally identifiable information). The backend signs and submits the transaction; no private key is ever exposed to the frontend. Public verification later recomputes the current package hash and compares it against the commitment recorded on-chain.
+TALA uses Stellar Testnet as a public integrity anchor. The application builds a deterministic representation from selected project, milestone, and evidence metadata, including document digests, and calculates its SHA-256 hash. The application submits that hash to Stellar Testnet. The transaction does not contain the full evidence documents.
 
-## Verification
+The current implementation signs and submits Stellar transactions from the backend using server-side configuration. Signing credentials must not be exposed in the frontend or committed to the repository.
 
-A public verification page (`/verify/:projectId/:packageId`, no login required) reports one of three states:
+## Verification and its limits
 
-- **VERIFIED** — the current evidence-package hash matches the commitment recorded on Stellar Testnet.
-- **TAMPERED / MISMATCH** — the current evidence package does not match the Stellar commitment.
-- **NOT ATTESTED** — no Stellar attestation has been recorded for this evidence package.
+A public page is available at `/verify/:projectId/:packageId`. It does not require a login or a Stellar wallet. The page asks TALA’s backend to recompute the current package hash and compare it with the associated Stellar commitment.
 
-## Demo
+This is a public verification flow, but it is not currently a standalone verifier: the page relies on TALA’s backend and stored package records to reconstruct the package. A third party cannot reproduce the result solely from the Stellar transaction without access to the package data and reconstruction details.
 
-All data currently in the application is **synthetic / demo data** and is labeled as such throughout the UI.
+The page reports one of these results:
 
-The primary demo scenario is the **San Isidro Barangay Road Rehabilitation Program** (₱50,000,000, In Progress), which demonstrates the full lifecycle: record milestones → attach evidence → generate an evidence package → anchor its SHA-256 to Stellar Testnet → verify successfully → modify evidence to show a mismatch → restore to verify again.
+- **VERIFIED** — the recomputed package hash matches the commitment used for the Stellar attestation.
+- **TAMPERED / MISMATCH** — the recomputed package hash does not match that commitment.
+- **NOT ATTESTED** — no Stellar transaction is associated with the package.
+
+If the backend cannot retrieve the Stellar transaction during verification, the current implementation may use the commitment stored in TALA’s database. The result should therefore be read with the backend dependency in mind.
+
+## Demo data
+
+The application includes synthetic demonstration data. Demo records are not claims about actual government projects or transactions.
+
+The demonstration scenario follows a project through milestone recording, evidence-package creation, Testnet attestation, verification, and a controlled metadata-change example that produces a mismatch.
 
 ## Architecture
 
-- **Frontend** — React single-page app (Create React App + CRACO, Tailwind CSS, shadcn/ui). Public portal, project pages, verification page, QR generation, and staff dashboards.
-- **Backend** — FastAPI (Python). REST API under the `/api` prefix; JWT authentication with role-based access (LGU Administrator, LGU Reviewer, Auditor); deterministic canonicalization + SHA-256 engine; append-only audit trail.
-- **Database** — MongoDB.
-- **Object storage** — Uploaded evidence documents are stored off-chain via the configured object-storage integration; only non-sensitive metadata and the SHA-256 digest are exposed publicly.
-- **Stellar Testnet** — Backend-signed transactions anchor the evidence-package SHA-256 commitment.
-- **Public verification** — Anyone can independently verify a commitment without an account or wallet.
+- **Frontend:** React application with public project and verification pages, QR links, and staff dashboards.
+- **Backend:** FastAPI service providing the application API, role-based access, evidence-package generation, SHA-256 calculation, Stellar Testnet submission, and verification.
+- **Database:** MongoDB stores application records and workflow history.
+- **Evidence storage:** Evidence files are stored off-chain using the configured object-storage integration.
+- **Stellar Testnet:** Records the package hash commitment associated with an attestation.
+
+## Security boundaries
+
+- Sensitive evidence files remain off-chain.
+- Stellar receives the evidence-package hash commitment, not the complete evidence package.
+- Stellar signing credentials are configured server-side and must not be committed to the repository or exposed to the frontend.
+- The application is configured for Stellar Testnet. This README does not describe a production deployment or a compliance certification.
 
 ## Development
 
-### Prerequisites
-
-- Python 3.11+
-- Node.js 18+ and Yarn
-- MongoDB (local or hosted)
-
-### Backend
-
-```bash
-cd backend
-pip install -r requirements.txt
-# configure environment variables (see below), then start with your process manager / uvicorn
-uvicorn server:app --host 0.0.0.0 --port 8001
-```
-
-Seed synthetic demo data (optional, one-time):
-
-```bash
-cd backend
-python seed_data.py
-```
-
-Run backend tests:
-
-```bash
-cd backend
-pytest
-```
-
-### Frontend
-
-```bash
-cd frontend
-yarn install
-yarn start          # development
-yarn build          # production build
-```
-
-### Environment variables
-
-Secrets and configuration are supplied via environment variables (never hardcoded). Create `backend/.env` and `frontend/.env` locally (these are git-ignored).
-
-**Backend (`backend/.env`)** — names only:
-
-- `MONGO_URL`
-- `DB_NAME`
-- `CORS_ORIGINS`
-- `JWT_SECRET`
-- `ADMIN_EMAIL`, `ADMIN_PASSWORD`
-- `REVIEWER_EMAIL`, `REVIEWER_PASSWORD`
-- `AUDITOR_EMAIL`, `AUDITOR_PASSWORD`
-- `STELLAR_HORIZON_URL`
-- `STELLAR_NETWORK_PASSPHRASE`
-- `STELLAR_PUBLIC_KEY`
-- `STELLAR_SECRET_KEY`
-- `EMERGENT_LLM_KEY` (object-storage integration key)
-- `INTEGRATION_PROXY_URL` (object-storage endpoint)
-
-**Frontend (`frontend/.env`)** — names only:
-
-- `REACT_APP_BACKEND_URL`
-
-## Security
-
-- All secrets **must** be supplied through environment variables or the deployment platform's secret management.
-- No real credentials, API keys, Stellar secret keys, JWT secrets, or database credentials are committed to this repository.
-- `.env` files are git-ignored and must never be committed.
-- TALA operates on **Stellar Testnet** only; sensitive documents and personally identifiable information remain off-chain.
+The application has separate frontend and backend components. See the project directories and their configuration files for current setup requirements and commands. Keep credentials in local or deployment environment configuration; do not commit secrets or `.env` files.
 
 ---
 
