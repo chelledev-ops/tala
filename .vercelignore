@@ -1,0 +1,4 @@
+contracts/
+backend/tests/
+**/node_modules/
+**/__pycache__/

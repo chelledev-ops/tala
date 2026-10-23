@@ -25,8 +25,33 @@ from auth import (create_access_token, get_current_user, hash_password,
                   require_roles, verify_password)
 
 mongo_url = os.environ["MONGO_URL"]
-client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ["DB_NAME"]]
+DB_NAME = os.environ["DB_NAME"]
+
+# A Motor client is bound to the event loop it first runs on. Uvicorn keeps one
+# loop, but a serverless runtime (Vercel) may run requests on a new loop, so the
+# client is (re)created for the loop that is running.
+_client: AsyncIOMotorClient | None = None
+_client_loop = None
+
+
+def _database():
+    global _client, _client_loop
+    loop = asyncio.get_running_loop()
+    if _client is None or _client_loop is not loop:
+        if _client is not None:
+            _client.close()
+        _client, _client_loop = AsyncIOMotorClient(mongo_url), loop
+    return _client[DB_NAME]
+
+
+class _CurrentLoopDb:
+    """`db.users` etc. resolve to the database on the running loop's client."""
+
+    def __getattr__(self, name):
+        return getattr(_database(), name)
+
+
+db = _CurrentLoopDb()
 
 app = FastAPI(title="ISLA Proof API")
 api = APIRouter(prefix="/api")
@@ -490,16 +515,39 @@ async def seed_users():
             await db.users.update_one({"email": email}, {"$set": {"password_hash": hash_password(pw)}})
 
 
-@app.on_event("startup")
-async def on_startup():
+_started = False
+
+
+async def ensure_started():
+    """Seed the staff accounts and set up storage once per process.
+
+    Runs from the startup event under uvicorn, and from the first request on
+    serverless runtimes that don't send startup events.
+    """
+    global _started
+    if _started:
+        return
     await seed_users()
     try:
         await asyncio.to_thread(storage.init_storage)
         logger.info("Object storage initialized")
     except Exception as exc:
         logger.warning("Storage init failed (uploads may be unavailable): %s", exc)
+    _started = True
+
+
+@app.middleware("http")
+async def _start_once(request, call_next):
+    await ensure_started()
+    return await call_next(request)
+
+
+@app.on_event("startup")
+async def on_startup():
+    await ensure_started()
 
 
 @app.on_event("shutdown")
 async def on_shutdown():
-    client.close()
+    if _client is not None:
+        _client.close()
