@@ -244,7 +244,10 @@ async def attest_package(package_id: str, user: dict = Depends(require_roles(ROL
     _, pkg_hash = ev.compute_package_hash(project, milestone, docs)
     await write_audit("STELLAR_ATTESTATION_PREPARED", user, project_id=pkg["project_id"], package_id=package_id, result=pkg_hash)
     try:
-        res = await asyncio.to_thread(ss.anchor_commitment, pkg_hash)
+        if ss.contract_enabled():
+            res = await asyncio.to_thread(ss.attest_on_contract, package_id, pkg["project_id"], pkg_hash)
+        else:
+            res = await asyncio.to_thread(ss.anchor_commitment, pkg_hash)
     except Exception as exc:
         logger.exception("Stellar attestation failed")
         raise HTTPException(502, f"Stellar Testnet submission failed: {type(exc).__name__}")
@@ -252,6 +255,8 @@ async def attest_package(package_id: str, user: dict = Depends(require_roles(ROL
         "status": "Attested", "sha256": pkg_hash, "stellar_commitment": pkg_hash,
         "stellar_tx": res["tx_hash"], "stellar_ledger": res["ledger"],
         "explorer_url": res["explorer_url"], "horizon_url": res["horizon_url"],
+        "stellar_method": res.get("method", "memo"),
+        "contract_id": res.get("contract_id"), "contract_url": res.get("contract_url"),
         "attested_at": now_iso(),
     }
     await db.packages.update_one({"id": package_id}, {"$set": update})
@@ -275,8 +280,11 @@ async def verify(project_id: str, package_id: str):
     onchain = None
     if pkg.get("stellar_tx"):
         try:
-            onchain = await asyncio.to_thread(ss.fetch_onchain_commitment, pkg["stellar_tx"])
-            if onchain.get("onchain_sha256"):
+            if pkg.get("stellar_method") == "soroban":
+                onchain = await asyncio.to_thread(ss.read_contract_attestation, package_id)
+            else:
+                onchain = await asyncio.to_thread(ss.fetch_onchain_commitment, pkg["stellar_tx"])
+            if onchain and onchain.get("onchain_sha256"):
                 onchain_hash = onchain["onchain_sha256"]
         except Exception:
             logger.warning("Could not read on-chain record; using stored commitment")
@@ -301,6 +309,9 @@ async def verify(project_id: str, package_id: str):
         "stellar_ledger": pkg.get("stellar_ledger"),
         "explorer_url": pkg.get("explorer_url"),
         "horizon_url": pkg.get("horizon_url"),
+        "stellar_method": pkg.get("stellar_method", "memo"),
+        "contract_id": pkg.get("contract_id"),
+        "contract_url": pkg.get("contract_url"),
         "attested_at": pkg.get("attested_at"),
         "onchain": onchain,
         "document_count": len(docs),
