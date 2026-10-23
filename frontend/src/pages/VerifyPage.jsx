@@ -201,6 +201,15 @@ function VerifyResult({ projectId, packageId }) {
                 </a>
               )}
             </div>
+            {res.stellar_method === "soroban" && res.contract_id && (
+              <div className="text-sm text-slate-500" data-testid="verify-contract">
+                Recorded in the TALA attestation contract{" "}
+                <a href={res.contract_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 font-mono font-semibold text-emerald-700 hover:underline">
+                  {res.contract_id.slice(0, 6)}…{res.contract_id.slice(-6)} <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+                {" "}— the commitment is read back from the contract each time this page verifies.
+              </div>
+            )}
           </div>
         )}
       </div>
