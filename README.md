@@ -1,5 +1,7 @@
 # TALA — Verifiable Public Projects
 
+[![CI](https://github.com/chelledev-ops/tala/actions/workflows/ci.yml/badge.svg)](https://github.com/chelledev-ops/tala/actions/workflows/ci.yml)
+
 TALA is a civic-tech platform for recording public project milestones and organizing related evidence. It creates a deterministic SHA-256 commitment for an evidence package and records that commitment on Stellar Testnet so the package can be checked for changes.
 
 TALA is a transparency and verification tool. It does not replace government project, procurement, accounting, or records-management systems.
@@ -147,6 +149,14 @@ pytest
 ```
 
 `tests/test_core.py` checks canonicalization, hashing and verification and always runs. `tests/test_api.py` and `tests/test_new_features.py` exercise a running backend; they run when `TALA_API_URL` and the `ADMIN_`/`REVIEWER_`/`AUDITOR_` `EMAIL` and `PASSWORD` variables are set, and are skipped otherwise.
+
+### Continuous integration
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every pull request and push to `main`:
+
+- **Backend:** installs `requirements.txt`, checks every module compiles, runs `pytest`
+- **Frontend:** `yarn install --frozen-lockfile` and `yarn build`
+- **Contract:** `cargo test`, then `stellar contract build`; the `.wasm` is uploaded as the `tala-attestation-wasm` artifact for deployment
 
 ---
 
