@@ -1,25 +1,11 @@
-"""End-to-end API tests for ISLA Proof backend against public URL."""
-import os
+"""End-to-end API tests against a running TALA backend (see conftest.py)."""
 import time
 import pytest
 import requests
 
-BASE = os.environ.get("REACT_APP_BACKEND_URL", "").rstrip("/")
-if not BASE:
-    # fall back to reading frontend/.env
-    try:
-        with open("/app/frontend/.env") as f:
-            for line in f:
-                if line.startswith("REACT_APP_BACKEND_URL="):
-                    BASE = line.split("=", 1)[1].strip().rstrip("/")
-    except Exception:
-        pass
+from conftest import ADMIN, API, AUDITOR, REVIEWER, requires_live_backend
 
-API = f"{BASE}/api"
-
-ADMIN = {"email": "admin@isla.gov.ph", "password": "Admin@123"}
-REVIEWER = {"email": "reviewer@isla.gov.ph", "password": "Review@123"}
-AUDITOR = {"email": "auditor@isla.gov.ph", "password": "Audit@123"}
+pytestmark = requires_live_backend
 
 
 @pytest.fixture(scope="session")
