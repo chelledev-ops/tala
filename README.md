@@ -11,18 +11,18 @@ Public project
   → Milestones and evidence
   → Evidence-package metadata and document digests
   → Deterministic SHA-256 commitment
-  → Stellar Testnet transaction
+  → TALA attestation contract on Stellar Testnet (Soroban)
   → Public verification page
 ```
 
-The Stellar transaction records the cryptographic commitment. Evidence documents remain off-chain.
+A Soroban smart contract records the cryptographic commitment under the package's ID, write-once. Evidence documents remain off-chain.
 
 ## Features
 
 - Project and milestone tracking
 - Evidence-package creation
 - Deterministic SHA-256 commitments
-- Stellar Testnet attestation
+- Stellar Testnet attestation through a Soroban smart contract (write-once, publicly readable)
 - Public verification pages and QR links
 - Tamper and mismatch detection
 - Role-based staff access
@@ -39,15 +39,20 @@ The Stellar transaction records the cryptographic commitment. Evidence documents
 
 ## Stellar and data handling
 
-TALA uses Stellar Testnet as a public integrity anchor. The application builds a deterministic representation from selected project, milestone, and evidence metadata, including document digests, and calculates its SHA-256 hash. The application submits that hash to Stellar Testnet. The transaction does not contain the full evidence documents.
+TALA uses Stellar Testnet as a public integrity anchor. The application builds a deterministic representation from selected project, milestone, and evidence metadata, including document digests, and calculates its SHA-256 hash. The full evidence documents never go on-chain.
+
+The hash is recorded in one of two ways:
+
+- **Soroban attestation contract** (when `TALA_CONTRACT_ID` is set): the backend calls `attest` on the TALA attestation contract in [`contracts/`](contracts/README.md). The contract stores the commitment under the package ID together with the project ID, the attester and the ledger time. A package can be attested only once, and only by accounts the contract admin has approved. Anyone can read a commitment back with the contract's `get` or `verify` functions.
+- **Transaction memo** (fallback, when no contract is configured): a Stellar transaction with the hash as its memo and a `manage_data` entry.
 
 The current implementation signs and submits Stellar transactions from the backend using server-side configuration. Signing credentials must not be exposed in the frontend or committed to the repository.
 
 ## Verification and its limits
 
-A public page is available at `/verify/:projectId/:packageId`. It does not require a login or a Stellar wallet. The page asks TALA’s backend to recompute the current package hash and compare it with the associated Stellar commitment.
+A public page is available at `/verify/:projectId/:packageId`. It does not require a login or a Stellar wallet. The page asks TALA’s backend to recompute the current package hash and compare it with the associated Stellar commitment. For contract attestations, the backend reads the commitment from the contract each time; the page links to the contract on Stellar Expert.
 
-This is a public verification flow, but it is not currently a standalone verifier: the page relies on TALA’s backend and stored package records to reconstruct the package. A third party cannot reproduce the result solely from the Stellar transaction without access to the package data and reconstruction details.
+This is a public verification flow, but it is not currently a standalone verifier: the page relies on TALA’s backend and stored package records to reconstruct the package. A third party can read the recorded commitment directly from the contract, but cannot recompute the package hash without access to the package data and reconstruction details.
 
 The page reports one of these results:
 
@@ -69,7 +74,8 @@ The demonstration scenario follows a project through milestone recording, eviden
 - **Backend:** FastAPI service providing the application API, role-based access, evidence-package generation, SHA-256 calculation, Stellar Testnet submission, and verification.
 - **Database:** MongoDB stores application records and workflow history.
 - **Evidence storage:** Evidence files are stored off-chain in a configured S3-compatible bucket.
-- **Stellar Testnet:** Records the package hash commitment associated with an attestation.
+- **Soroban contract (`contracts/tala-attestation`):** Rust smart contract on Stellar Testnet that records each package's hash commitment, write-once.
+- **Stellar Testnet:** Hosts the contract (or, without one, the memo transaction).
 
 ## S3-compatible evidence storage
 
@@ -95,8 +101,9 @@ Before enabling this storage configuration for existing data, migrate the existi
 ## Development
 
 ```text
-backend/    FastAPI service (Python 3.11+), MongoDB, S3-compatible storage
-frontend/   React app (Create React App + CRACO, Tailwind, Radix UI)
+backend/     FastAPI service (Python 3.11+), MongoDB, S3-compatible storage
+frontend/    React app (Create React App + CRACO, Tailwind, Radix UI)
+contracts/   Soroban attestation contract (Rust)
 ```
 
 Keep credentials in local or deployment environment configuration. Never commit secrets or `.env` files; `.env.example` in each folder lists every setting.
@@ -121,6 +128,15 @@ cp .env.example .env          # REACT_APP_BACKEND_URL points at the backend
 yarn install
 yarn start                    # http://localhost:3000
 yarn build                    # production build in frontend/build
+```
+
+### Smart contract
+
+See [`contracts/README.md`](contracts/README.md) to build, test and deploy the contract. Put the deployed contract ID in `TALA_CONTRACT_ID`; the backend's Stellar account must be an attester on the contract.
+
+```bash
+cd contracts
+cargo test
 ```
 
 ### Tests
