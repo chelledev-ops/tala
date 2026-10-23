@@ -94,7 +94,43 @@ Before enabling this storage configuration for existing data, migrate the existi
 
 ## Development
 
-The application has separate frontend and backend components. See the project directories and their configuration files for current setup requirements and commands. Keep credentials in local or deployment environment configuration; do not commit secrets or `.env` files.
+```text
+backend/    FastAPI service (Python 3.11+), MongoDB, S3-compatible storage
+frontend/   React app (Create React App + CRACO, Tailwind, Radix UI)
+```
+
+Keep credentials in local or deployment environment configuration. Never commit secrets or `.env` files; `.env.example` in each folder lists every setting.
+
+### Backend
+
+```bash
+cd backend
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+cp .env.example .env                                # then fill it in
+uvicorn server:app --reload --port 8001
+```
+
+The staff accounts are created on first start from `ADMIN_*`, `REVIEWER_*` and `AUDITOR_*` in `.env`.
+
+### Frontend
+
+```bash
+cd frontend
+cp .env.example .env          # REACT_APP_BACKEND_URL points at the backend
+yarn install
+yarn start                    # http://localhost:3000
+yarn build                    # production build in frontend/build
+```
+
+### Tests
+
+```bash
+cd backend
+pytest
+```
+
+`tests/test_core.py` checks canonicalization, hashing and verification and always runs. `tests/test_api.py` and `tests/test_new_features.py` exercise a running backend; they run when `TALA_API_URL` and the `ADMIN_`/`REVIEWER_`/`AUDITOR_` `EMAIL` and `PASSWORD` variables are set, and are skipped otherwise.
 
 ---
 
