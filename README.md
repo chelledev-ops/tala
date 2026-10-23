@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/chelledev-ops/tala/actions/workflows/ci.yml/badge.svg)](https://github.com/chelledev-ops/tala/actions/workflows/ci.yml)
 
+**Live site: [talaapp.ph](https://talaapp.ph)**
+
 TALA is a civic-tech platform for recording public project milestones and organizing related evidence. It creates a deterministic SHA-256 commitment for an evidence package and records that commitment on Stellar Testnet so the package can be checked for changes.
 
 TALA is a transparency and verification tool. It does not replace government project, procurement, accounting, or records-management systems.
