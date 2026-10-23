@@ -108,6 +108,7 @@ Before enabling this storage configuration for existing data, migrate the existi
 backend/     FastAPI service (Python 3.11+), MongoDB, S3-compatible storage
 frontend/    React app (Create React App + CRACO, Tailwind, Radix UI)
 contracts/   Soroban attestation contract (Rust)
+api/         Vercel entry point for the backend
 ```
 
 Keep credentials in local or deployment environment configuration. Never commit secrets or `.env` files; `.env.example` in each folder lists every setting.
@@ -151,6 +152,17 @@ pytest
 ```
 
 `tests/test_core.py` checks canonicalization, hashing and verification and always runs. `tests/test_api.py` and `tests/test_new_features.py` exercise a running backend; they run when `TALA_API_URL` and the `ADMIN_`/`REVIEWER_`/`AUDITOR_` `EMAIL` and `PASSWORD` variables are set, and are skipped otherwise.
+
+### Deploy on Vercel
+
+The repo deploys to Vercel as one project: the React build is served as static files and the FastAPI backend runs as a Python function at `/api/*` (`vercel.json`, `api/index.py`). The website calls the API on the same domain, so `REACT_APP_BACKEND_URL` can stay empty.
+
+1. Import `chelledev-ops/tala` in Vercel (Framework preset: **Other**; `vercel.json` sets the build).
+2. Add the backend settings from `backend/.env.example` under **Settings → Environment Variables**: `MONGO_URL` (MongoDB Atlas or another hosted MongoDB), `DB_NAME`, `JWT_SECRET`, `CORS_ORIGINS`, the `ADMIN_`/`REVIEWER_`/`AUDITOR_` accounts, the `STELLAR_*` keys, `TALA_CONTRACT_ID`, `S3_*`, and `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` for the evidence bucket.
+3. Deploy. The staff accounts are seeded on the first request.
+4. **Custom domain:** add `talaapp.ph` under **Settings → Domains**, then set the DNS records Vercel shows in Cloudflare (DNS only, not proxied).
+
+Limits to know: a request body can be at most 4.5 MB, so larger evidence uploads fail on Vercel, and a function runs for at most 60 seconds (a contract attestation normally confirms well within that).
 
 ### Continuous integration
 
